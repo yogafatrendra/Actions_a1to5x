@@ -54,7 +54,7 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y git wget curl aria2 python python3 python3-setuptools unzip axel cpio file
-          pip3 install protobuf==3.6.0
+          pip3 install protobuf
           pip3 install gdown
 
       - id: var
