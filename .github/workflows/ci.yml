@@ -17,7 +17,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v2
 
       - name: Initialization environment
         run: |
@@ -158,7 +158,7 @@ jobs:
           
 
       - name: Upload to Artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.var.outputs.zipname }}
           path: |
