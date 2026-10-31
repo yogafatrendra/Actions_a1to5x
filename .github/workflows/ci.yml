@@ -157,18 +157,18 @@ jobs:
           mv system.img template/system.img
           mv system.patch.dat template/system.patch.dat
           
-          # Fix imp & kompatibilitas fungsi brotli di Python 3.12
+          # Bypass modul imp dan atur fungsi compress agar aman dari error Python 3.12/brotli lib
           sed -i '/import imp/d' rimg2sdat.py
           sed -i 's/if imp.find_module.*:/if True:/g' rimg2sdat.py
-          sed -i 's/def compress(data):/def compress(data):\n    import brotli\n    return brotli.compress(data)\n#/' rimg2sdat.py
+          sed -i 's/def compress(data):/def compress(data):\n    return b""\n#/' rimg2sdat.py
           
           cd template
           ../rimg2sdat.py -c system.img
           ls -al
           
-          # Fallback kompresi manual jika .br belum terbentuk
-          if [ -f "system.new.dat" ] && [ ! -f "system.new.dat.br" ]; then
-              brotli -j -v -3 system.new.dat -o system.new.dat.br
+          # Kompresi .new.dat ke .new.dat.br secara langsung menggunakan CLI brotli Linux
+          if [ -f "system.new.dat" ]; then
+              brotli -j -v -1 system.new.dat -o system.new.dat.br
           fi
           
           rm -f system.img
