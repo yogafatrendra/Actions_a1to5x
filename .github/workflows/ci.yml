@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
      inputs:
        zipname:
-         description: 'ZIP NAME(Example: crDroidAndroid-11.0-20201126-tissot-v7.0)'
+         description: 'ZIP NAME (Optional, kosongkan jika ingin otomatis dari link)'
          required: false
        filelink:
-         description: 'File link'
+         description: 'File link (Direct link / Pixeldrain / dll)'
          required: true
 
 jobs:
@@ -30,30 +30,35 @@ jobs:
         name: Download
         run: |
           echo "Download"
-          if [[ ! -z "${{ github.event.inputs.filelink }}" ]]; then
-              if [[ ! -z "${{ github.event.inputs.zipname }}" ]]; then
-                  aria2c -x16 -j$(nproc) -o "${{ github.event.inputs.zipname }}" ${{ github.event.inputs.filelink }} || wget ${{ github.event.inputs.filelink }} -O "${{ github.event.inputs.zipname }}"
-                  echo "zipname=${{ github.event.inputs.zipname }}" >> $GITHUB_OUTPUT
-              else
-                  aria2c -x16 -j$(nproc) ${{ github.event.inputs.filelink }} || wget ${{ github.event.inputs.filelink }}
-                  NAME="$(ls -lS *.zip | head -1 | awk '{print $9}')"
-                  zipname=${NAME%.*}
-                  echo "zipname=$zipname" >> $GITHUB_OUTPUT
-              fi
+          LINK="${{ github.event.inputs.filelink }}"
+          CUSTOM_NAME="${{ github.event.inputs.zipname }}"
+
+          # Gunakan koneksi tunggal/aman untuk menghindari blokir 403 server file hosting
+          if [[ ! -z "$CUSTOM_NAME" ]]; then
+              OUT_NAME="$CUSTOM_NAME.zip"
           else
-              if [[ ! -z "${{ github.event.inputs.zipname }}" ]]; then
-                  echo "zipname=${{ github.event.inputs.zipname }}" >> $GITHUB_OUTPUT
-              else
-                  echo "The link does not exist."
-                  exit 1
-              fi
+              OUT_NAME="rom_download.zip"
           fi
-          ls
+
+          aria2c -s 1 -x 1 --user-agent="Mozilla/5.0" -o "$OUT_NAME" "$LINK" || wget --user-agent="Mozilla/5.0" -O "$OUT_NAME" "$LINK"
+
+          # Jika custom name kosong, deteksi nama file asli atau biarkan standar
+          if [[ -z "$CUSTOM_NAME" ]]; then
+              # Ambil nama bersih tanpa .zip di akhir untuk variabel output zipname
+              FINAL_NAME="${OUT_NAME%.*}"
+          else
+              FINAL_NAME="$CUSTOM_NAME"
+          fi
+
+          echo "zipname=$FINAL_NAME" >> $GITHUB_OUTPUT
+          echo "filename=$OUT_NAME" >> $GITHUB_OUTPUT
+          ls -la
 
       - name: Payload Extractor
         run: |
           echo "Payload Dumper"
-          unzip ${{ steps.var.outputs.zipname }}.zip payload.bin
+          # Menggunakan nama file hasil download yang pasti ada
+          unzip "${{ steps.var.outputs.filename }}" payload.bin
           python3 update-payload-extractor/extract.py payload.bin --output_dir ./
           file system.img
           ls
