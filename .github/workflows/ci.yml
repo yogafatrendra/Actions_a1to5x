@@ -157,9 +157,10 @@ jobs:
           mv system.img template/system.img
           mv system.patch.dat template/system.patch.dat
           
-          # Fix deprecation modul imp di Python 3.12 untuk rimg2sdat.py
+          # Fix imp & kompatibilitas fungsi brotli di Python 3.12
           sed -i '/import imp/d' rimg2sdat.py
           sed -i 's/if imp.find_module.*:/if True:/g' rimg2sdat.py
+          sed -i 's/def compress(data):/def compress(data):\n    import brotli\n    return brotli.compress(data)\n#/' rimg2sdat.py
           
           cd template
           ../rimg2sdat.py -c system.img
