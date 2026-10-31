@@ -157,37 +157,38 @@ jobs:
           mv system.img template/system.img
           mv system.patch.dat template/system.patch.dat
           
-          # Patch rimg2sdat.py untuk bypass modul imp dan fungsi kompresi internal yang error
+          # Hapus import imp dan bypass pengecekan imp.find_module
           sed -i '/import imp/d' rimg2sdat.py
           sed -i 's/if imp.find_module.*:/if True:/g' rimg2sdat.py
           
+          # Tulis ulang fungsi CompressDatFile secara bersih tanpa error indentasi string
           python3 -c "
           with open('rimg2sdat.py', 'r') as f:
-              code = f.read()
-          old_func = '''def CompressDatFile(infile, outfile):
-    in_file = open(infile, 'rb')
-    out_file = open(outfile, 'wb')
-    try:
-        while True:
-            data = in_file.read(1024 * 1024)
-            if not data:
-                break
-            out_file.write(compress(data))
-    finally:
-        in_file.close()
-        out_file.close()'''
-          new_func = '''def CompressDatFile(infile, outfile):
-    import shutil
-    shutil.copyfile(infile, outfile.replace('.br', ''))'''
-          code = code.replace(old_func, new_func)
+              lines = f.readlines()
+          
+          new_lines = []
+          skip = False
+          for line in lines:
+              if 'def CompressDatFile(' in line:
+                  skip = True
+                  new_lines.append('def CompressDatFile(infile, outfile):\n')
+                  new_lines.append('    import shutil\n')
+                  new_lines.append('    shutil.copyfile(infile, outfile.replace(\".br\", \"\"))\n')
+              elif skip and 'def ' in line:
+                  skip = False
+              
+              if not skip:
+                  new_lines.append(line)
+                  
           with open('rimg2sdat.py', 'w') as f:
-              f.write(code)
+              f.writelines(new_lines)
           "
           
           cd template
           ../rimg2sdat.py -c system.img
           ls -al
           
+          # Kompres manual file system.new.dat menjadi system.new.dat.br via CLI Linux
           if [ -f "system.new.dat" ]; then
               brotli -j -v -1 system.new.dat -o system.new.dat.br
               rm -f system.new.dat
