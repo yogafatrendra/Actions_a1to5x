@@ -156,11 +156,21 @@ jobs:
           ls -al
           mv system.img template/system.img
           mv system.patch.dat template/system.patch.dat
+          
+          # Hapus import imp yang deprecated di Python 3.12
+          sed -i '/import imp/d' rimg2sdat.py
+          
           cd template
           ../rimg2sdat.py -c system.img
           ls -al
-          rm system.img
-          rm system.new.dat
+          
+          # Fallback kompresi manual jika .br belum terbentuk
+          if [ -f "system.new.dat" ] && [ ! -f "system.new.dat.br" ]; then
+              brotli -j -v -3 system.new.dat -o system.new.dat.br
+          fi
+          
+          rm -f system.img
+          rm -f system.new.dat
           cd ..
           mv template ${{ steps.var.outputs.zipname }}
           
